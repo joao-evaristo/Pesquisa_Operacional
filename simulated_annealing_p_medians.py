@@ -1,5 +1,4 @@
 import random
-from ManipuladorArquivo import ManipuladorArquivo
 import math
 
 
@@ -40,20 +39,22 @@ class SimulatedAnnealing:
         facilidades_ordenadas = sorted(
             enumerate(self.distancias), key=lambda x: sum(x[1]), reverse=True
         )
-        indices_p_primeiras = [item[0] for item in facilidades_ordenadas[:p]]
+        indices_p_primeiras = [item[0] for item in facilidades_ordenadas[: self.p]]
         # as facilidades abertas estarao da seguinte forma:
         # facilidades_abertas = [0, 1, 0, 0, 0, 1 ....] onde 1 significa que a facilidade esta aberta
-        facilidades_abertas = [1 if i in indices_p_primeiras else 0 for i in range(m)]
+        facilidades_abertas = [
+            1 if i in indices_p_primeiras else 0 for i in range(self.m)
+        ]
         return facilidades_abertas
 
     def define_atendimento(self, facilidades_abertas):
         # definir o atendimento de cada cliente
         # cada cliente deve ser atendido pela facilidade mais proxima
         # cada cliente e atendido por apenas uma facilidade
-        xij = [None] * n
-        for i in range(n):
+        xij = [None] * self.n
+        for i in range(self.n):
             menor_distancia = float("inf")
-            for j in range(m):
+            for j in range(self.m):
                 if facilidades_abertas[j] == 1:
                     distancia_i_j = self.distancias[j][i]
                     if distancia_i_j < menor_distancia:
@@ -75,8 +76,8 @@ class SimulatedAnnealing:
         # trocar uma facilidade aberta por uma fechada
         # ou vice versa
         facilidades_abertas = self.facilidades_abertas.copy()
-        n_alteracoes = random.randint(1, m)
-        posicoes_alteradas = random.sample(range(m), n_alteracoes)
+        n_alteracoes = random.randint(1, self.m)
+        posicoes_alteradas = random.sample(range(self.m), n_alteracoes)
         for posicao_alterada in posicoes_alteradas:
             facilidades_abertas[posicao_alterada] = (
                 1 if facilidades_abertas[posicao_alterada] == 0 else 0
