@@ -14,7 +14,6 @@ class SimulatedAnnealing:
         temperatura_inicial=1000,
         alpha=0.99,
         sa_max=10,
-        numero_vizinhos=5,
     ):
         self.n = n  # numero de clientes
         self.I = I  # conjunto de clientes
@@ -32,15 +31,19 @@ class SimulatedAnnealing:
         self.temperatura = self.temperatura_inicial
         self.alpha = alpha
         self.sa_max = sa_max
-        self.numero_vizinhos = numero_vizinhos
 
-    def gerar_solucao_inicial(self):
+    def gerar_solucao_inicial_gulosa(self):
         # usar estrategia gulosa
         # pegar as facilidades, cujo a soma das distancias para os clientes seja a maior
         # e que ainda nao foram abertas
         facilidades = sorted(
             range(self.m), key=lambda x: sum(self.distancias[x]), reverse=True
         )
+        return facilidades
+
+    def gerar_solucao_inicial_aleatoria(self):
+        # gerar uma solucao inicial aleatoria
+        facilidades = random.sample(range(self.m), self.m)
         return facilidades
 
     def define_atendimento(self, facilidades):
@@ -71,11 +74,25 @@ class SimulatedAnnealing:
         # trocar uma facilidade aberta por uma fechada
         # ou vice versa
         vizinho = self.facilidades.copy()
-        facilidade_sai = random.randint(0, self.p - 1)
-        facilidade_entra = random.randint(self.p, self.m - 1)
-        aux = vizinho[facilidade_sai]
-        vizinho[facilidade_sai] = vizinho[facilidade_entra]
-        vizinho[facilidade_entra] = aux
+        # definir pesos para cada tipo de troca
+        if self.temperatura > 0.5 * self.temperatura_inicial:
+            pesos = [0.6, 0.30, 0.10]
+        elif self.temperatura > 0.2 * self.temperatura_inicial:
+            pesos = [0.8, 0.15, 0.05]
+        else:
+            pesos = [0.9, 0.09, 0.01]
+        # determinar o número de trocas com base em pesos
+        trocas = random.choices([1, 2, 3], weights=pesos, k=1)[0]
+        # obter amostra exclusiva de facilidades a serem trocadas
+        facilidades_trocadas = random.sample(range(self.p), trocas)
+
+        for facilidade_sai in facilidades_trocadas:
+            facilidade_entra = random.randint(self.p, self.m - 1)
+            vizinho[facilidade_sai], vizinho[facilidade_entra] = (
+                vizinho[facilidade_entra],
+                vizinho[facilidade_sai],
+            )
+
         return vizinho
 
     def aceita_melhora(self, custo_vizinho):
@@ -94,7 +111,7 @@ class SimulatedAnnealing:
         self.temperatura = self.temperatura * self.alpha
 
     def executa(self):
-        facilidades = self.gerar_solucao_inicial()
+        facilidades = self.gerar_solucao_inicial_gulosa()
         self.facilidades = facilidades
         self.melhor_solucao = facilidades
         self.custo_atual = self.funcao_objetivo(facilidades)
@@ -103,19 +120,14 @@ class SimulatedAnnealing:
         print(f"Custo da solucao inicial: {self.custo_atual}")
         while self.temperatura > 0.1:
             for _ in range(self.sa_max):
-                melhor_vizinho = None
-                custo_melhor_vizinho = float("inf")
-                for _ in range(self.numero_vizinhos):
-                    vizinho = self.vizinhanca()
-                    if self.funcao_objetivo(vizinho) < custo_melhor_vizinho:
-                        melhor_vizinho = vizinho
-                        custo_melhor_vizinho = self.funcao_objetivo(vizinho)
-                if self.aceita_melhora(custo_melhor_vizinho):
-                    self.facilidades = melhor_vizinho
-                    self.custo_atual = custo_melhor_vizinho
-                    if custo_melhor_vizinho < self.funcao_objetivo(self.melhor_solucao):
-                        self.melhor_solucao = melhor_vizinho
-                        self.custo_solucao = custo_melhor_vizinho
+                vizinho = self.vizinhanca()
+                custo_vizinho = self.funcao_objetivo(vizinho)
+                if self.aceita_melhora(custo_vizinho):
+                    self.facilidades = vizinho
+                    self.custo_atual = custo_vizinho
+                    if custo_vizinho < self.funcao_objetivo(self.melhor_solucao):
+                        self.melhor_solucao = vizinho
+                        self.custo_solucao = custo_vizinho
             self.atualiza_temperatura()
         facilidades_abertas = self.melhor_solucao[: self.p]
         print(f"Melhor solucao: \n{facilidades_abertas}")
