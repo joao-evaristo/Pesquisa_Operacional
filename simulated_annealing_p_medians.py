@@ -133,3 +133,4 @@ class SimulatedAnnealing:
         print(f"Melhor solucao: \n{facilidades_abertas}")
         print(f"Custo da melhor solucao: {self.custo_solucao}")
         print("*" * 50)
+        return self.custo_solucao
