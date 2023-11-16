@@ -66,7 +66,7 @@ class SimulatedAnnealing:
         xij = self.define_atendimento(s)
         custo = 0
         for i, j in enumerate(xij):
-            custo -= self.distancias[j][i]
+            custo += self.distancias[j][i]
         return custo
 
     def vizinhanca(self):
@@ -98,12 +98,12 @@ class SimulatedAnnealing:
     def aceita_melhora(self, custo_vizinho):
         # aceitar a solucao vizinha se ela for melhor
         # ou se ela for pior, mas a probabilidade de aceitar for maior que um numero aleatorio entre 0 e 1
-        if custo_vizinho < self.custo_atual:
+        if custo_vizinho > self.custo_atual:
             return True
         else:
             # utiliza o criterio de metropolis
             delta = custo_vizinho - self.custo_atual
-            return random.random() < math.exp(-delta / self.temperatura)
+            return random.random() < math.exp(delta / self.temperatura)
 
     def atualiza_temperatura(self):
         # atualiza a temperatura
@@ -125,7 +125,7 @@ class SimulatedAnnealing:
                 if self.aceita_melhora(custo_vizinho):
                     self.facilidades = vizinho
                     self.custo_atual = custo_vizinho
-                    if custo_vizinho < self.funcao_objetivo(self.melhor_solucao):
+                    if custo_vizinho > self.funcao_objetivo(self.melhor_solucao):
                         self.melhor_solucao = vizinho
                         self.custo_solucao = custo_vizinho
             self.atualiza_temperatura()
