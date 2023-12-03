@@ -1,6 +1,8 @@
+import copy
 import random
 import math
 from ManipuladorArquivo import ManipuladorArquivo
+from ordered_crossover import ordered_crossover
 
 
 def decisao(probabilidade):
@@ -16,12 +18,12 @@ class GeneticAlgorithm:
         J,
         p,
         distancias,
-        n_populacao_inicial=10,
-        taxa_elitismo=0.15,
-        tamanho_populacao=20,
-        taxa_cruzamento=0.4,
-        taxa_mutacao=0.1,
-        n_geracoes=300,
+        n_populacao_inicial=100,
+        taxa_elitismo=0.10,
+        tamanho_populacao=30,
+        taxa_cruzamento=0.3,
+        taxa_mutacao=0.2,
+        n_geracoes=1000,
     ):
         self.n = n  # numero de clientes
         self.I = I  # conjunto de clientes
@@ -47,7 +49,8 @@ class GeneticAlgorithm:
         # gerar uma populacao inicial aleatoria
         populacao = []
         for i in range(self.n_populacao_inicial):
-            populacao.append(random.sample(range(self.m), self.m)[: self.p])
+            facilidades_aleatorias = random.sample(range(self.m), self.p)
+            populacao.append(facilidades_aleatorias)
         return populacao
 
     def define_atendimento(self, facilidades):
@@ -55,7 +58,7 @@ class GeneticAlgorithm:
         # cada cliente deve ser atendido pela facilidade mais proxima
         # cada cliente e atendido por apenas uma facilidade
         xij = [None] * self.n
-        facilidades_abertas = facilidades[: self.p]
+        facilidades_abertas = facilidades
         for i in range(self.n):
             menor_distancia = float("inf")
             for j in facilidades_abertas:
@@ -76,6 +79,22 @@ class GeneticAlgorithm:
     def classificar_individuos(self):
         self.populacao.sort(key=self.fitness, reverse=True)
 
+    def mutacao(self, individuo):
+        individuo_mutado = copy.deepcopy(individuo)
+        quantidade_genes_mutados = random.choices(
+            [5, 10, 20], weights=[80, 15, 5], k=1
+        )[0]
+        facilidades_possiveis = [i for i in range(self.m) if i not in individuo_mutado]
+        facilidades_escolhidas = random.sample(
+            facilidades_possiveis, quantidade_genes_mutados
+        )
+        index_facilidades_mutadas = random.sample(
+            range(len(individuo_mutado)), quantidade_genes_mutados
+        )
+        for i, j in zip(index_facilidades_mutadas, facilidades_escolhidas):
+            individuo_mutado[i] = j
+        return individuo_mutado
+
     def selecionar_individuos(self):
         tamanho_elite = int(len(self.populacao) * self.taxa_elitismo)
         populacao_restante = self.populacao[tamanho_elite:]
@@ -88,24 +107,33 @@ class GeneticAlgorithm:
                     taxa_de_selecao = taxa_de_selecao * 0.80
         self.populacao = populacao_selecionada
 
-    def cruzar_individuos(self):
-        pass
+    def cruzar_individuos(self, individuo1, individuo2):
+        filho1, filho2 = ordered_crossover(individuo1, individuo2)
+        return filho1, filho2
+
+    def cruzar_populacao(self):
+        tamanho_reprodutores = int(len(self.populacao) * self.taxa_cruzamento)
+        reprodutores = copy.deepcopy(self.populacao[:tamanho_reprodutores])
+        if len(reprodutores) % 2 != 0:
+            reprodutores.append(reprodutores[0])
+        for i in range(0, len(reprodutores), 2):
+            filho_1, filho_2 = self.cruzar_individuos(
+                reprodutores[i], reprodutores[i + 1]
+            )
+            if decisao(self.taxa_mutacao):
+                filho_1 = self.mutacao(filho_1)
+            if decisao(self.taxa_mutacao):
+                filho_2 = self.mutacao(filho_2)
+            self.populacao.append(filho_1)
+            self.populacao.append(filho_2)
 
     def fazer_mutacao(self):
         pass
 
     def executar(self):
-        pass
-
-
-if __name__ == "__main__":
-    ma = ManipuladorArquivo("pmed40.txt.table.p56.B")
-    distancias = ma.obter_distancias_facilidades()
-    n = ma.obter_n_clients()
-    I = ma.obter_clientes()
-    m = ma.obter_m_facilities()
-    J = ma.obter_facilidades()
-    p = ma.obter_p_desired_facilities()
-    ga = GeneticAlgorithm(n, I, m, J, p, distancias)
-    ga.classificar_individuos()
-    print(ga.populacao)
+        self.classificar_individuos()
+        for _ in range(self.n_geracoes):
+            self.selecionar_individuos()
+            self.cruzar_populacao()
+            self.classificar_individuos()
+        return self.fitness(self.populacao[0])
